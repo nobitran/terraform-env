@@ -5,3 +5,5 @@
 *.tfstate.*
 
 *.tfvars
+# except
+!example.tfvars
