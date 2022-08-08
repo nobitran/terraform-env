@@ -9,13 +9,6 @@ terraform {
   required_version = ">= 1.2.0"
 }
 
-# variables
-variable "vpc_cidr_block" {}
-variable "subnet_cidr_block" {}
-variable "avail_zone" {}
-variable "env_prefix" {}
-variable "key_name" {}
-
 provider "aws" {
   region = "ap-southeast-1"
 }
@@ -116,13 +109,18 @@ data "aws_ami" "ami_latest" {
   }
 }
 
+resource "aws_key_pair" "ec2_key" {
+  key_name   = "ec2-key"
+  public_key = file(var.key_location)
+}
+
 resource "aws_instance" "ec2" {
-  ami                    = data.aws_ami.ami_latest.id
-  instance_type          = var.default_instance_type
-  subnet_id              = aws_subnet.main.id
-  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
-  availability_zone      = var.avail_zone
-  key_name               = var.key_name
+  ami                         = data.aws_ami.ami_latest.id
+  instance_type               = var.default_instance_type
+  subnet_id                   = aws_subnet.main.id
+  vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
+  availability_zone           = var.avail_zone
+  key_name                    = aws_key_pair.ec2_key.key_name
   associate_public_ip_address = true
 
   tags = {
