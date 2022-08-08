@@ -9,57 +9,123 @@ terraform {
   required_version = ">= 1.2.0"
 }
 
-
-variable "main_vpc_cidr_block" {
-  type = string
-}
-
-variable "main_subnet_cidr_block" {
-  type = string
-}
-
-variable "vpc_name" {
-  type = string
-}
-
-variable "subnet_name" {
-  type = string
-}
-
-
+# variables
+variable "vpc_cidr_block" {}
+variable "subnet_cidr_block" {}
+variable "avail_zone" {}
+variable "env_prefix" {}
+variable "key_name" {}
 
 provider "aws" {
   region = "ap-southeast-1"
 }
 
-resource "aws_vpc" "main-vpc" {
-  cidr_block = var.main_vpc_cidr_block
+resource "aws_vpc" "main" {
+  cidr_block = var.vpc_cidr_block
 
   tags = {
-    Name = var.vpc_name
+    Name = "${var.env_prefix}-vpc"
   }
 }
 
-resource "aws_subnet" "main-subnet" {
-  vpc_id            = aws_vpc.main-vpc.id
-  cidr_block        = var.main_subnet_cidr_block
-  availability_zone = "ap-southeast-1a"
+resource "aws_subnet" "main" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.subnet_cidr_block
+  availability_zone = var.avail_zone
 
   tags = {
-    Name = var.subnet_name
+    Name = "${var.env_prefix}-subnet"
   }
 }
 
-data "aws_vpc" "default-vpc" {
-  default = true
-}
-
-resource "aws_subnet" "sub-subnet" {
-  vpc_id            = data.aws_vpc.default-vpc.id
-  cidr_block        = "172.31.48.0/20"
-  availability_zone = "ap-southeast-1b"
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "Sub-Subnet"
+    Name = "${var.env_prefix}-igw"
+  }
+}
+
+resource "aws_default_route_table" "default" {
+  default_route_table_id = aws_vpc.main.default_route_table_id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = {
+    Name = "${var.env_prefix}-rt"
+  }
+}
+
+resource "aws_route_table_association" "rt_subnet" {
+  subnet_id      = aws_subnet.main.id
+  route_table_id = aws_default_route_table.default.id
+}
+
+resource "aws_security_group" "ec2_sg" {
+  name        = "${var.env_prefix}-ec2-sg"
+  description = "Allow request for EC2"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "SSH to EC2"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.default_cidr_block]
+  }
+
+  ingress {
+    description = "HTTP to EC2"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = [var.default_cidr_block]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.default_cidr_block]
+  }
+
+  tags = {
+    Name = "${var.env_prefix}-ec2-sg"
+  }
+}
+
+data "aws_ami" "ami_latest" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-kernel-*-x86_64-gp2"]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+resource "aws_instance" "ec2" {
+  ami                    = data.aws_ami.ami_latest.id
+  instance_type          = var.default_instance_type
+  subnet_id              = aws_subnet.main.id
+  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
+  availability_zone      = var.avail_zone
+  key_name               = var.key_name
+  associate_public_ip_address = true
+
+  tags = {
+    Name = "${var.env_prefix}-ec2"
   }
 }
