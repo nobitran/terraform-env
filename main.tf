@@ -122,8 +122,13 @@ resource "aws_instance" "ec2" {
   availability_zone           = var.avail_zone
   key_name                    = aws_key_pair.ec2_key.key_name
   associate_public_ip_address = true
+  user_data                   = base64encode(file("initial.sh"))
+
+  lifecycle {
+    ignore_changes = [associate_public_ip_address]
+  }
 
   tags = {
-    Name = "${var.env_prefix}-ec2"
+    Name = "${var.env_prefix}-ec2-server"
   }
 }
