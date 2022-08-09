@@ -111,7 +111,7 @@ data "aws_ami" "ami_latest" {
 
 resource "aws_key_pair" "ec2_key" {
   key_name   = "ec2-key"
-  public_key = file(var.key_location)
+  public_key = file(var.public_key_location)
 }
 
 resource "aws_instance" "ec2" {
@@ -122,7 +122,26 @@ resource "aws_instance" "ec2" {
   availability_zone           = var.avail_zone
   key_name                    = aws_key_pair.ec2_key.key_name
   associate_public_ip_address = true
-  user_data                   = base64encode(file("initial.sh"))
+
+  connection {
+    type        = "ssh"
+    user        = "ec2-user"
+    host        = self.public_ip
+    private_key = file(var.private_key_location)
+  }
+
+  provisioner "file" {
+    source      = "script.sh"
+    destination = "/home/ec2-user/script-on-ec2.sh"
+  }
+
+  provisioner "remote-exec" {
+    script = "script.sh"
+  }
+
+  provisioner "local-exec" {
+    command = "ssh -o StrictHostKeyChecking=no ec2-user@${self.public_ip}"
+  }
 
   lifecycle {
     ignore_changes = [associate_public_ip_address]

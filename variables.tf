@@ -4,7 +4,8 @@ variable "subnet_cidr_block" {}
 variable "avail_zone" {}
 variable "env_prefix" {}
 variable "key_name" {}
-variable "key_location" {}
+variable "public_key_location" {}
+variable "private_key_location" {}
 
 
 # define variable
