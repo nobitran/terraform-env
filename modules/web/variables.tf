@@ -1,0 +1,9 @@
+variable "vpc_id" {}
+variable "env_prefix" {}
+variable "default_cidr_block" {}
+variable "image_name" {}
+variable "public_key_location" {}
+variable "default_instance_type" {}
+variable "subnet_id" {}
+variable "avail_zone" {}
+variable "private_key_location" {}

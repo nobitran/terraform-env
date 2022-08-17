@@ -7,3 +7,7 @@
 *.tfvars
 # except
 !example.tfvars
+
+.DS_Store
+
+crash.log
