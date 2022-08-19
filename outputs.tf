@@ -1,14 +1,11 @@
 output "vpc_id" {
-  value = aws_vpc.main.id
+  value = module.vpc.vpc_id
 }
 output "vpc_name" {
-  value = aws_vpc.main.tags.Name
+  value = module.vpc.name
 }
-output "subnet_id" {
-  value = module.subnet_md.subnet.id
-}
-output "subnet_name" {
-  value = module.subnet_md.subnet.tags.Name
+output "subnet_ids" {
+  value = module.vpc.public_subnets
 }
 output "security_group_id" {
   value = module.web_md.ec2_sg.id

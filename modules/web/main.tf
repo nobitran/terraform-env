@@ -67,17 +67,24 @@ resource "aws_instance" "ec2" {
 
   connection {
     type        = "ssh"
+    agent       = "false"
     user        = "ec2-user"
     host        = self.public_ip
     private_key = file(var.private_key_location)
   }
+
+  # provisioner "file" {
+  #   source      = "script.sh"
+  #   destination = "script.sh"
+  # }
 
   provisioner "remote-exec" {
     script = "script.sh"
   }
 
   provisioner "local-exec" {
-    command = "ssh -o StrictHostKeyChecking=no ec2-user@${self.public_ip}"
+    command = "ssh -T -o StrictHostKeyChecking=no ec2-user@${self.public_ip}"
+    on_failure = continue
   }
 
   lifecycle {
